@@ -1,17 +1,16 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js'
-import { getAuth , createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js'
-import { getDatabase, ref, set, push, child, get } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js'
+import { getAuth , createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js'
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, deleteDoc, doc, updateDoc , getDoc   } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const login = document.querySelector('#login');
 const signup = document.querySelector('.signUp');
 const logoutBtn = document.querySelector('#logoutBtn');
 const addProduct = document.querySelector('#addProduct');
-
+let editProductBtn = document.querySelector('#editProduct');
 
 const firebaseConfig = {
   apiKey: "AIzaSyBxFL-icHaxRUf2A_H6SVnrMuLrlpyRK-k",
   authDomain: "smit-dashboard-2f551.firebaseapp.com",
-  databaseURL : 'https://smit-dashboard-2f551-default-rtdb.firebaseio.com',
   projectId: "smit-dashboard-2f551",
   storageBucket: "smit-dashboard-2f551.firebasestorage.app",
   messagingSenderId: "511570403341",
@@ -22,7 +21,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 
 const auth = getAuth(app);
-const database = getDatabase(app);
+const db = getFirestore(app);
+let editedId;
 
 function showMessage(msg) {
   const messageEl = document.getElementById('message');
@@ -30,34 +30,42 @@ function showMessage(msg) {
 }
 
 if(signup){
-    signup.addEventListener('click',()=>{
-        let email = document.querySelector('#signup-email').value;
-        let password = document.querySelector('#signup-password').value;
+    signup.addEventListener('click', async ()=>{
+      
+      let email = document.querySelector('#signup-email').value;
+      let password = document.querySelector('#signup-password').value;
+      let role = document.querySelector('#role').value;
+   try {
+
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    await updateProfile(user, { displayName : role });
+
+      alert("User registered successfully!");
+      window.location.href = './login.html';
     
-    createUserWithEmailAndPassword(auth , email, password)
-    .then(() => {
-      window.location.href='./dashboard.html';
-      email = '';
-      password = '';
-    })
-    .catch(error => {
+   } catch (error) {
       showMessage(error.message, "error");
-    });
+    
+   }
 })}
 
 if(login){
-login.addEventListener('click',()=>{
-  const email = document.querySelector('#login-email').value;
-  const password = document.querySelector('#login-password').value;
-  signInWithEmailAndPassword(auth,email,password)
-  .then(()=>{
-  window.location.href='./dashboard.html';
-  email = '';
-  password = '';
-  })
-  .catch((error)=>{
-  showMessage(error.message)
-  })
+login.addEventListener('click', async()=>{
+  let email = document.querySelector('#login-email').value;
+  let password = document.querySelector('#login-password').value;
+  try {
+    const userCredential =  await signInWithEmailAndPassword(auth,email,password)
+     const user = userCredential.user;
+     if(user.displayName === 'admin'){
+      location.href = '/dashboard.html'
+     }else{
+      location.href = '/user.html'
+     }
+  } catch (error) {
+   showMessage(error.message) 
+  }
 })
 }
 
@@ -67,30 +75,32 @@ if(logoutBtn){
   })
 }
 
-const fetchData = ()=>{
-  const dbRef = ref(database);
-
-get(child(dbRef, 'products'))
-  .then((snapshot) => {
-    if (snapshot.exists()) {
-      const data = snapshot.val();
-      const jsonData = Object.entries(data).map(([id, product])=>({
-        id,
-        ...product
-      }))
-      displayInCard(jsonData)
-    } else {
-      console.log('No data found');
-    }
-  })
-  .catch((error) => {
-    console.error('Error getting data:', error);
-  });
+const fetchData = async ()=>{
+  const querySnapshot = await getDocs(collection(db, "items"));
+  let card = document.querySelector('#card');
+  card.innerHTML = '';
+  querySnapshot.forEach((doc) => {
+  const item = doc.data()
+  card.innerHTML += `
+     <div class="card" style="width: 18rem;">
+    <img src=${item.productImage} class="card-img-top" alt="...">
+     <div class="card-body">
+     <p class="card-text">Price : $${item.price}</p>
+     <p class="card-text">Product : ${item.productName}</p>
+     <p class="card-text">Descrition : ${item.productDescription}</p>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editModal" data-bs-whatever="@mdo" type="button" class="btn btn-primary" onclick="editItem('${doc.id}')">Edit</button>
+    <button type="button" onclick='deleteItem("${doc.id}")' class="btn btn-danger">Delete</button>
+   </div>
+ </div>
+     `
+});
 }
-fetchData()
+if(location.pathname === '/dashboard.html'){
+  fetchData()
+}
 
 if(addProduct){
-  addProduct.addEventListener('click', ()=>{
+  addProduct.addEventListener('click', async ()=>{
     let productName = document.querySelector('#productName').value;
     let price = document.querySelector('#productPrice').value;
     let productImage = document.querySelector('#productImage').value;
@@ -99,19 +109,16 @@ if(addProduct){
       alert('Details Missings')
       return
     }
-    // Reference to the "products" path
-    const productsRef = ref(database, 'products');
-    // Create a unique ID under /products/
-    const newProductRef = push(productsRef);
-    // Save the data under that ID
-    set(newProductRef, {
-      productName,
-      price,
-      productImage,
-      productDescription
-    })
-  .then(() => {
-        Swal.fire({
+    try {
+  const docRef = await addDoc(collection(db, "items"), {
+    productName,
+    productImage,
+    price,
+    productDescription,
+    createdAt : serverTimestamp()
+  });
+  console.log("Document written with ID: ", docRef.id);
+  Swal.fire({
   title: "Product added!",
   icon: "success"
        });
@@ -121,28 +128,52 @@ if(addProduct){
        productDescription = '';
        document.querySelector('#close').click();
        fetchData();
-      }).catch((error) => {
-        console.error("Error adding product:", error);
-      });
+} catch (e) {
+  console.error("Error adding document: ", e);
+}
   })
 }
 
-const displayInCard = (data) => {
-  let card = document.querySelector('#card');
-  card.innerHTML = '';
-  console.log(data)
-  data.map((item)=>{
-    card.innerHTML += `
-    <div class="card" style="width: 18rem;">
-  <img src=${item.productImage} class="card-img-top" alt="...">
-  <div class="card-body">
-    <p class="card-text">Price : $${item.price}</p>
-    <p class="card-text">Product : ${item.productName}</p>
-    <p class="card-text">Descrition : ${item.productDescription}</p>
-   <button type="button" class="btn btn-primary">Edit</button>
-   <button type="button" class="btn btn-danger">Delete</button>
-  </div>
-</div>
-    `
+const deleteItem = async (id)=>{
+  let confirm = window.confirm('Are you sure to delete this items?')
+  if(!confirm) return null;
+  await deleteDoc(doc(db, "items", id));
+  fetchData()
+}
+
+const editItem = async(id)=>{
+  const docRef = doc(db, "items", id);
+  const docSnap = await getDoc(docRef);
+  editedId = id;
+  if (docSnap.exists()) {
+    let data = docSnap.data()
+   document.querySelector('#editName').value = data.productName;
+   document.querySelector('#editPrice').value = data.price;
+   document.querySelector('#editImage').value = data.productImage;
+   document.querySelector('#editDescription').value = data.productDescription;
+} else {
+  console.log("No such document!");
+}
+}
+if(editProductBtn){
+  editProductBtn.addEventListener('click', async ()=>{
+    let editName = document.querySelector('#editName').value
+    let editPrice = document.querySelector('#editPrice').value
+    let editImage = document.querySelector('#editImage').value
+    let editDescription = document.querySelector('#editDescription').value
+    
+    const itemRef = doc(db, "items", editedId);
+    await updateDoc(itemRef, {
+     productName : editName,
+     productImage : editImage,
+     productDescription: editDescription,
+     price : editPrice
+    });
+    fetchData();
+    document.querySelector('#closeEditBtn').click()
   })
 }
+
+
+window.editItem = editItem;
+window.deleteItem = deleteItem;

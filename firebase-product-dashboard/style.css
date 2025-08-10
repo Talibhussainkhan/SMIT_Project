@@ -22,6 +22,14 @@ input {
   box-sizing: border-box;
 }
 
+select {
+  display: block;
+  width: 100%;
+  margin: 10px 0;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
 button {
   padding: 10px;
   width: 100%;
