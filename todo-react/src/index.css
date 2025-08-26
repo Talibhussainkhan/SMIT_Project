@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+
+::-webkit-scrollbar {
+  width: 2px;   /* vertical */
+  height: 2px;  /* horizontal */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;  /* track ko transparent rakha */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3b82f6;   /* blue thumb */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;   /* darker blue hover */
+}
