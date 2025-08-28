@@ -71,8 +71,8 @@ const App = () => {
    useEffect(() => {
     getDataFromApi()
    }, [])
-   console.log(quiz[index]?.correctAnswer);
-   console.log(score)
+  //  console.log(quiz[index]?.correctAnswer);
+  //  console.log(score)
    
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
