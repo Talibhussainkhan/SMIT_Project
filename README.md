@@ -5,6 +5,7 @@
 - [bulb_onOff_react](https://bulbonoffreact.vercel.app/)
 - [expense-app-react](https://expenseappreact.vercel.app/)
 - [todo-react](https://todoreactsmit.vercel.app/)
+- [quiz-app-react](https://quizappsmit.vercel.app/)
 
 ## Tech Stack
 - HTML
