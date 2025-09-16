@@ -7,6 +7,7 @@
 - [todo-react](https://todoreactsmit.vercel.app/)
 - [quiz-app-react-api](https://quizappsmit.vercel.app/)
 - [react-router](https://reactroutingsmit.vercel.app/)
+- [todo-redux-toolkit](https://todoreduxsmit.vercel.app/)
 
 ## Tech Stack
 - HTML
